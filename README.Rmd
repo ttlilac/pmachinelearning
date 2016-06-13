@@ -1,1 +1,66 @@
-# pmachinelearning
+---
+title: "Practical Machine Learning Project"
+output: html_document
+---
+#Executive Summary
+Human Acitivity Recognition has emerged as a key research area in the last years. The goal of this project is to use data from accelerometers on the belt, forearm, arm and dumbell of 6 participants to build a model to predict the manner in which they did the exercise.
+
+#Data processing
+Let's load the data and create training and testing data partitions:
+
+```{r echo=TRUE}
+library(caret)
+
+
+pmlt<- read.csv("pml-training.csv")
+
+inTrain <- createDataPartition(pmlt$classe, p = 0.7, list=F)
+testing <- pmlt[-inTrain,]
+training <- pmlt[inTrain,]
+
+```
+The dataset has 160 variables and 19622 observations. With str() command, we found many columns were empty which would be discarded from our model:
+* Discard empty columns
+* Near Zero Variance Covariates
+* Non relavent columns
+```{r echo=TRUE}
+training <- training[ , colSums(is.na(training)) == 0]
+nzv <- nearZeroVar(training)
+training <- training[-nzv]
+training <- subset(training, select=-c(1:6))
+```
+
+
+
+#Model Fitting
+We had performed the below two models fitting against training dataset:
+* Naive Bayes Model
+* Random Forest Model
+
+```{r echo=TRUE}
+fitC1<- trainControl(method = "cv" , number=10)
+fit1<- train(training$classe ~ ., data=training, preProcess="pca", method ="nb", trControl=fitC1)
+print(fit1)
+
+fitC2 <- trainControl(method="cv", number=10)
+fit2 <- train(training$classe ~ ., data=training, preProcess="pca", method="rf", trControl=fitC2)
+print(fit2)
+```
+
+#Model Selection
+Test the model against the testing set to estimate the out of sample error rate:
+
+```{r echo=TRUE}
+confusionMatrix(predict(fit1, testing), testing$classe)
+confusionMatrix(predict(fit2, testing), testing$classe)
+```
+
+Based on the accuracy, Random Forest model is the best for this dataset.
+
+#Prediction on Assignment Data
+Applying the Random Forest model to PML testing data:
+```{r echo=TRUE}
+test <- read.csv("pml-testing.csv")
+predict(fit2, test)
+```
+
